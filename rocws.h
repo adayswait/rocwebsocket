@@ -45,6 +45,8 @@ class ws_link
     void ws_handshake();
     void ws_recv();
     void ws_send(char *data, int len);
+    void ws_ping();
+    void ws_pong();
     int ws_recv_handshake_req(); /*握手消息是否已全部接受*/
     int ws_make_frame(uint8_t fin, uint8_t op_code, uint8_t mask,
                       uint64_t payload_len, uint32_t masking_key,
@@ -61,7 +63,7 @@ class ws_link
 
     uint8_t _next_step = ROCWS_FRAME_GET_STATUS;
     uint8_t _fin = 0;
-    uint8_t _op_code = 0;
+    uint8_t _op_code = 0; /*低4位存储数据帧Opcode,高4位存储控制帧Opcode*/
     uint8_t _mask = 0;
     uint64_t _payload_len = 0;
     char _masking_key[4] = {0, 0, 0, 0};

@@ -90,9 +90,26 @@ void ws_link::ws_recv()
         uint8_t status = (uint8_t)(tempstr[0]);
         _fin = (status & 0xf0) == 0x80;
         uint8_t opcode = status & 0xf;
-        if (opcode)
+        if (opcode == ROCWS_FRAME_DATA_CONTINUE ||
+            opcode == ROCWS_FRAME_DATA_TEXT ||
+            opcode == ROCWS_FRAME_DATA_BINARY)
         {
             _op_code |= opcode;
+        }
+        else if (opcode == ROCWS_FRAME_CTRL_CLOSE ||
+                 opcode == ROCWS_FRAME_CTRL_PING ||
+                 opcode == ROCWS_FRAME_CTRL_PONG)
+        {
+            _op_code |= (opcode << 4);
+            if (_fin != 1)
+            {
+                //控制帧不能分帧,单帧必须结束,
+                //否则判定协议错误,并发送关闭帧
+            }
+        }
+        else
+        {
+            //协议错误,应该发送关闭帧
         }
         _next_step = ROCWS_FRAME_GET_MASKPAYLOADLEN;
         if (rb->tail - rb->head == 0)
@@ -157,7 +174,7 @@ void ws_link::ws_recv()
             else
             {
                 _next_step = ROCWS_FRAME_GET_DATA;
-                if (rb->tail - rb->head == 0)
+                if (_lacking_bytes != 0 && rb->tail - rb->head == 0)
                 {
                     break;
                 }
@@ -258,7 +275,7 @@ void ws_link::ws_recv()
         uint32_t uulen = _data_size - _data_len;
         uint32_t getlen = rb->tail - rb->head;
         getlen = getlen > _lacking_bytes ? _lacking_bytes : getlen;
-        if (getlen >= uulen)
+        if (getlen != 0 && getlen >= uulen)
         {
             char *bak = _data;
             uint32_t bak_size = _data_size;
@@ -284,17 +301,40 @@ void ws_link::ws_recv()
                     umask(_data, _data_len, _masking_key);
                 }
                 *(_data + _data_len) = '\0';
-                //ws_send(_data, _data_len);
-                _link->next_plugin_level++;
-                if (_link->svr->plugin[_link->next_plugin_level].level != -1)
+                if (_op_code == ROCWS_FRAME_DATA_TEXT ||
+                    _op_code == ROCWS_FRAME_DATA_BINARY) //后续需要区分
                 {
+                    _link->next_plugin_level++;
+                    if (_link->svr->plugin[_link->next_plugin_level]
+                            .level != -1)
+                    {
 
-                    _link->svr->plugin[_link->next_plugin_level]
-                        .recv_handler(_link, _data);
+                        _link->svr->plugin[_link->next_plugin_level]
+                            .recv_handler(_link, _data);
+                    }
+                    else
+                    {
+                        _link->next_plugin_level = 0;
+                    }
                 }
                 else
                 {
-                    _link->next_plugin_level = 0;
+                    //包含控制帧
+                    uint8_t ctrl_opcode = _op_code >> 4;
+                    if (ctrl_opcode == ROCWS_FRAME_CTRL_CLOSE)
+                    {
+                    }
+                    else if (ctrl_opcode == ROCWS_FRAME_CTRL_PING)
+                    {
+                        ws_pong();
+                    }
+                    else if (ctrl_opcode == ROCWS_FRAME_CTRL_PONG)
+                    {
+                    }
+                    else
+                    {
+                    }
+                    _op_code &= 0xf; //清除控制帧标记
                 }
             }
             _fin = 0;
@@ -520,6 +560,30 @@ int ws_link::ws_recv_handshake_req()
     _data_len += i;
     rb->head += i;
     return 0;
+}
+
+void ws_link::ws_ping()
+{
+    unsigned char *frame;
+    int frame_len = ws_make_frame(1, ROCWS_FRAME_CTRL_PING,
+                                  0, 0, 0, NULL, frame);
+    if (frame_len != 0)
+    {
+        tcp_send(_link, frame, frame_len);
+        free(frame);
+    }
+}
+
+void ws_link::ws_pong()
+{
+    unsigned char *frame;
+    int frame_len = ws_make_frame(1, ROCWS_FRAME_CTRL_PONG,
+                                  0, 0, 0, NULL, frame);
+    if (frame_len != 0)
+    {
+        tcp_send(_link, frame, frame_len);
+        free(frame);
+    }
 }
 
 void ws_link::umask(char *data, int len, char *mask)
