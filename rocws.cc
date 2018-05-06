@@ -285,15 +285,26 @@ void ws_link::ws_recv()
                 }
                 *(_data + _data_len) = '\0';
                 //ws_send(_data, _data_len);
-                _fin = 0;
-                _data_len = 0;
+                _link->next_plugin_level++;
+                if (_link->svr->plugin[_link->next_plugin_level].level != -1)
+                {
+
+                    _link->svr->plugin[_link->next_plugin_level]
+                        .recv_handler(_link, _data);
+                }
+                else
+                {
+                    _link->next_plugin_level = 0;
+                }
             }
-            _lacking_bytes = 0;
-            _payload_len = 0;
-            if (rb->tail - rb->head > 0)
-            {
-                return ws_recv();
-            }
+            _fin = 0;
+            _data_len = 0;
+        }
+        _lacking_bytes = 0;
+        _payload_len = 0;
+        if (rb->tail - rb->head > 0)
+        {
+            return ws_recv();
         }
         else
         {
