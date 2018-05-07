@@ -36,6 +36,10 @@ void recv_handler(roc_link *link, void *custom_data)
 
 void close_handler(roc_link *link, void *custom_data)
 {
+    int fd = link->fd;
+    delete status_mgr[fd];
+    status_mgr.erase(fd);
+    link->svr->log(0, "ws tcp closed,fd:%d\n", fd);
     link->next_plugin_level++;
     if (link->svr->plugin[link->next_plugin_level].level != -1)
     {

@@ -336,15 +336,15 @@ void ws_link::ws_recv()
                     }
                     _op_code &= 0xf; //清除控制帧标记
                 }
+                _fin = 0;
+                _data_len = 0;
+                _lacking_bytes = 0;
+                _payload_len = 0;
+                if (rb->tail - rb->head > 0)
+                {
+                    return ws_recv();
+                }
             }
-            _fin = 0;
-            _data_len = 0;
-        }
-        _lacking_bytes = 0;
-        _payload_len = 0;
-        if (rb->tail - rb->head > 0)
-        {
-            return ws_recv();
         }
         else
         {
@@ -352,6 +352,7 @@ void ws_link::ws_recv()
             _lacking_bytes = _lacking_bytes - getlen;
             return;
         }
+
     } /* case ends */
     } /* switch ends */
 }
