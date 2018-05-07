@@ -17,6 +17,11 @@ void ws_link::tcp_recv()
 {
     if (_status == ROCWS_TCP_CONNECTED)
     {
+        if (_data_len > 4096) //4Kb数据还没完成握手,断开此链接
+        {
+            _link->svr->close_link(_link, NULL);
+            return;
+        }
         if (ws_recv_handshake_req())
         {
             ws_handshake();
