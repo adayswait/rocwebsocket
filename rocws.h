@@ -21,6 +21,52 @@
 #define ROCWS_FRAME_GET_MASKINGKEY 4
 #define ROCWS_FRAME_GET_DATA 5
 
+/*
+-+------------+-----------------+-----------|
+ |Status Code | Meaning         | Reference |
+-+------------+-----------------+-----------|
+ | 1000       | Normal Closure  | RFC 6455  |
+-+------------+-----------------+-----------|
+ | 1001       | Going Away      | RFC 6455  |
+-+------------+-----------------+-----------|
+ | 1002       | Protocol error  | RFC 6455  |
+-+------------+-----------------+-----------|
+ | 1003       | Unsupported Data| RFC 6455  |
+-+------------+-----------------+-----------|
+ | 1004       | ---Reserved---- | RFC 6455  |
+-+------------+-----------------+-----------|
+ | 1005       | No Status Rcvd  | RFC 6455  |
+-+------------+-----------------+-----------|
+ | 1006       | Abnormal Closure| RFC 6455  |
+-+------------+-----------------+-----------|
+ | 1007       | Invalid frame   | RFC 6455  |
+ |            | payload data    |           |
+-+------------+-----------------+-----------|
+ | 1008       | Policy Violation| RFC 6455  |
+-+------------+-----------------+-----------|
+ | 1009       | Message Too Big | RFC 6455  |
+-+------------+-----------------+-----------|
+ | 1010       | Mandatory Ext.  | RFC 6455  |
+-+------------+-----------------+-----------|
+ | 1011       | Internal Server | RFC 6455  |
+ |            | Error           |           |
+-+------------+-----------------+-----------|
+ | 1015       | TLS handshake   | RFC 6455  |
+-+------------+-----------------+-----------|
+*/
+#define ROCWS_STATUS_CODE_NORMAL_CLOSE 1000
+#define ROCWS_STATUS_CODE_GOING_AWAY 1001
+#define ROCWS_STATUS_CODE_PROTOCOL_ERR 1002
+#define ROCWS_STATUS_CODE_UNSUPPORTED_DATA 1003
+#define ROCWS_STATUS_CODE_NO_STATUS_RECVED 1005
+#define ROCWS_STATUS_CODE_ABNORMAL_CLOSE 1006
+#define ROCWS_STATUS_CODE_INVALID_PAYLOAD 1007
+#define ROCWS_STATUS_CODE_POLICY_VIOLATION 1008
+#define ROCWS_STATUS_CODE_MSG_TOO_LONG 1009
+#define ROCWS_STATUS_CODE_MANDATORY_EXIT 1010
+#define ROCWS_STATUS_CODE_INTERNAL_SVR_ERR 1011
+#define ROCWS_STATUS_CODE_TLS_HANDSHAKE 1015
+
 #define ROCWS_MAXPAYLOADLEN_PER_FRAME 130172
 
 #include <stdint.h>
@@ -47,7 +93,8 @@ class ws_link
     void ws_send(char *data, int len);
     void ws_ping();
     void ws_pong();
-    int ws_recv_handshake_req(); /*握手消息是否已全部接受*/
+    void ws_close(uint16_t close_code); /*主动发送关闭帧,或响应关闭帧*/
+    int ws_recv_handshake_req();        /*握手消息是否已全部接受*/
     int ws_make_frame(uint8_t fin, uint8_t op_code, uint8_t mask,
                       uint64_t payload_len, uint32_t masking_key,
                       char *payload_data, unsigned char *&frame);

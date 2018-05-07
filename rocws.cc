@@ -69,16 +69,6 @@ void ws_link::ws_handshake()
 void ws_link::ws_recv()
 {
     roc_ringbuf *rb = _link->ibuf;
-    char s7[8];
-    s7[7] = '\0';
-    roc_ringbuf_read(rb, s7, 7);
-    rb->head -= 7;
-    int i;
-    for (i = 0; i < 7; i++)
-    {
-        uint8_t a = (uint8_t)s7[i];
-    }
-
     char tempstr[8];
     switch (_next_step)
     {
@@ -105,11 +95,13 @@ void ws_link::ws_recv()
             {
                 //控制帧不能分帧,单帧必须结束,
                 //否则判定协议错误,并发送关闭帧
+                ws_close(ROCWS_STATUS_CODE_PROTOCOL_ERR);
             }
         }
         else
         {
             //协议错误,应该发送关闭帧
+            ws_close(ROCWS_STATUS_CODE_PROTOCOL_ERR);
         }
         _next_step = ROCWS_FRAME_GET_MASKPAYLOADLEN;
         if (rb->tail - rb->head == 0)
@@ -162,7 +154,7 @@ void ws_link::ws_recv()
             if (_mask)
             {
                 _next_step = ROCWS_FRAME_GET_MASKINGKEY;
-                if (rb->tail - rb->head < 4)
+                if (_lacking_bytes != 0 && rb->tail - rb->head < 4)
                 {
                     break;
                 }
@@ -260,7 +252,7 @@ void ws_link::ws_recv()
     ROCWS_FRAME_GET_MASKINGKEY_LABEL:
         roc_ringbuf_read(rb, _masking_key, 4);
         _next_step = ROCWS_FRAME_GET_DATA;
-        if (rb->tail - rb->head == 0)
+        if (_lacking_bytes != 0 && rb->tail - rb->head == 0)
         {
             break;
         }
@@ -323,6 +315,7 @@ void ws_link::ws_recv()
                     uint8_t ctrl_opcode = _op_code >> 4;
                     if (ctrl_opcode == ROCWS_FRAME_CTRL_CLOSE)
                     {
+                        ws_close(ROCWS_STATUS_CODE_NORMAL_CLOSE);
                     }
                     else if (ctrl_opcode == ROCWS_FRAME_CTRL_PING)
                     {
@@ -333,6 +326,7 @@ void ws_link::ws_recv()
                     }
                     else
                     {
+                        ws_close(ROCWS_STATUS_CODE_PROTOCOL_ERR);
                     }
                     _op_code &= 0xf; //清除控制帧标记
                 }
@@ -561,6 +555,20 @@ int ws_link::ws_recv_handshake_req()
     _data_len += i;
     rb->head += i;
     return 0;
+}
+void ws_link::ws_close(uint16_t close_code)
+{
+    char close_code_str[2];
+    close_code_str[0] = close_code & 0xff00;
+    close_code_str[1] = close_code & 0xff;
+    unsigned char *frame;
+    int frame_len = ws_make_frame(1, ROCWS_FRAME_CTRL_CLOSE,
+                                  0, 2, 0, close_code_str, frame);
+    if (frame_len != 0)
+    {
+        tcp_send(_link, frame, frame_len);
+        free(frame);
+    }
 }
 
 void ws_link::ws_ping()
