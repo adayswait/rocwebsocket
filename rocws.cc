@@ -101,12 +101,14 @@ void ws_link::ws_recv()
                 //控制帧不能分帧,单帧必须结束,
                 //否则判定协议错误,并发送关闭帧
                 ws_close(ROCWS_STATUS_CODE_PROTOCOL_ERR);
+                _status = ROCWS_WS_CLOSED;
             }
         }
         else
         {
             //协议错误,应该发送关闭帧
             ws_close(ROCWS_STATUS_CODE_PROTOCOL_ERR);
+            _status = ROCWS_WS_CLOSED;
         }
         _next_step = ROCWS_FRAME_GET_MASKPAYLOADLEN;
         if (rb->tail - rb->head == 0)
@@ -320,7 +322,14 @@ void ws_link::ws_recv()
                     uint8_t ctrl_opcode = _op_code >> 4;
                     if (ctrl_opcode == ROCWS_FRAME_CTRL_CLOSE)
                     {
-                        ws_close(ROCWS_STATUS_CODE_NORMAL_CLOSE);
+                        if (_status == ROCWS_WS_CLOSED)
+                        {
+                            _link->svr->close_link(_link, NULL);
+                        }
+                        else
+                        {
+                            ws_close(ROCWS_STATUS_CODE_NORMAL_CLOSE);
+                        }
                     }
                     else if (ctrl_opcode == ROCWS_FRAME_CTRL_PING)
                     {
@@ -332,6 +341,7 @@ void ws_link::ws_recv()
                     else
                     {
                         ws_close(ROCWS_STATUS_CODE_PROTOCOL_ERR);
+                        _status = ROCWS_WS_CLOSED;
                     }
                     _op_code &= 0xf; //清除控制帧标记
                 }
