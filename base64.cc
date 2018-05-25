@@ -65,10 +65,12 @@ int base64_encode(const unsigned char *in, unsigned int inlen, char *out)
             out[j++] = base64en[(in[i] >> 2) & 0x3F];
             continue;
         case 1:
-            out[j++] = base64en[((in[i - 1] & 0x3) << 4) + ((in[i] >> 4) & 0xF)];
+            out[j++] = base64en[((in[i - 1] & 0x3) << 4) +
+                                ((in[i] >> 4) & 0xF)];
             continue;
         case 2:
-            out[j++] = base64en[((in[i - 1] & 0xF) << 2) + ((in[i] >> 6) & 0x3)];
+            out[j++] = base64en[((in[i - 1] & 0xF) << 2) +
+                                ((in[i] >> 6) & 0x3)];
             out[j++] = base64en[in[i] & 0x3F];
         }
     }
