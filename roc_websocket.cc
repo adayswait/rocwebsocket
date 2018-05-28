@@ -3,9 +3,10 @@
 #include <string.h>
 #include <stdint.h>
 #include <algorithm>
-#include "rocws.h"
+
 #include "sha1.h"
 #include "base64.h"
+#include "roc_websocket.h"
 
 #define HANDSHAKE_FORMAT ("\
 HTTP/1.1 101 Switching Protocols\r\n\
@@ -519,8 +520,8 @@ int ws_link::ws_recv_handshake_req()
     roc_ringbuf *rb = _link->ibuf;
     uint32_t len = rb->tail - rb->head;
     uint32_t head_readable;
-    len = std::min(len, rb->tail - rb->head);
-    head_readable = std::min(len, rb->size - (rb->head & (rb->size - 1)));
+    len = min(len, rb->tail - rb->head);
+    head_readable = min(len, rb->size - (rb->head & (rb->size - 1)));
     int i;
     for (i = 0; i < head_readable; i++)
     {

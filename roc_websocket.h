@@ -71,7 +71,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include "plugin.h"
+#include "roc_interface.h"
 
 class ws_link
 {

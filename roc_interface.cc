@@ -1,8 +1,8 @@
 #include <map>
 #include <string.h>
 #include <iostream>
-#include "plugin.h"
-#include "rocws.h"
+#include "roc_interface.h"
+#include "roc_websocket.h"
 
 std::map<int, ws_link *> status_mgr;
 roc_send_func *tcp_send;
