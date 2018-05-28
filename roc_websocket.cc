@@ -438,7 +438,7 @@ int ws_link::ws_make_frame(uint8_t fin, uint8_t op_code, uint8_t mask,
 
 void ws_link::ws_send(char *data, int len)
 {
-    //单帧最大负载 130172 bytes
+    //单帧最大负载 131072 bytes
     if (len <= ROCWS_MAXPAYLOADLEN_PER_FRAME)
     {
         unsigned char *frame;
